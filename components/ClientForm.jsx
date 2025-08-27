@@ -29,7 +29,7 @@ export default function ClientForm({ zone, pkIp, onCreated }) {
 
     if (zone) {
       // 🔹 Cargar planes
-      fetch(`http://localhost:4000/api/planes/${zone}`)
+      fetch(`http://172.16.1.37:4000/api/planes/${zone}`)
         .then((res) => res.json())
         .then((data) => {
           console.log("Planes API response:", data);
@@ -38,7 +38,7 @@ export default function ClientForm({ zone, pkIp, onCreated }) {
         .catch((err) => console.error("Error cargando planes:", err));
 
       // 🔹 Cargar equipos
-      fetch(`http://localhost:4000/api/equipos/${zone}`)
+      fetch(`http://172.16.1.37:4000/api/equipos/${zone}`)
         .then((res) => res.json())
         .then((data) => {
           console.log("Equipos API response:", data);
@@ -47,7 +47,7 @@ export default function ClientForm({ zone, pkIp, onCreated }) {
         .catch((err) => console.error("Error cargando equipos:", err));
 
       // 🔹 Cargar accesos DHCP
-      fetch(`http://localhost:4000/api/accesos-dhcp/${zone}`)
+      fetch(`http://172.16.1.37:4000/api/accesos-dhcp/${zone}`)
         .then((res) => res.json())
         .then((data) => {
           console.log("Accesos DHCP:", data);
@@ -64,7 +64,7 @@ export default function ClientForm({ zone, pkIp, onCreated }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch("http://localhost:4000/api/clientes/crear", {
+      const res = await fetch("http://172.16.1.37:4000/api/clientes/crear", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ formData: form, pkIp, zone }),
