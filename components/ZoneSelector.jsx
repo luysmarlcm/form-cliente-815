@@ -9,7 +9,7 @@ export default function ZoneSelector({ onSelect }) {
   useEffect(() => {
     const loadZones = async () => {
       try {
-        const res = await fetch("http://localhost:4000/api/zonas"); // 👈 ajusta si usas proxy
+        const res = await fetch("http://172.16.1.37:4000/api/zonas"); // 👈 ajusta si usas proxy
         const data = await res.json();
         setZones(data);
       } catch (error) {
