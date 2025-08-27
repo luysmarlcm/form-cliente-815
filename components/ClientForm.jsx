@@ -23,6 +23,9 @@ export default function ClientForm({ zone, pkIp, onCreated }) {
   const [planes, setPlanes] = useState([]);
   const [equipos, setEquipos] = useState([]);
   const [accesosDhcp, setAccesosDhcp] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [clienteCreado, setClienteCreado] = useState(null);
+  const [conexionCreada, setConexionCreada] = useState(null);
 
   useEffect(() => {
     setForm((prev) => ({ ...prev, zone }));
@@ -31,29 +34,20 @@ export default function ClientForm({ zone, pkIp, onCreated }) {
       // 🔹 Cargar planes
       fetch(`http://172.16.1.37:4000/api/planes/${zone}`)
         .then((res) => res.json())
-        .then((data) => {
-          console.log("Planes API response:", data);
-          setPlanes(Array.isArray(data) ? data : []);
-        })
+        .then((data) => setPlanes(Array.isArray(data) ? data : []))
         .catch((err) => console.error("Error cargando planes:", err));
 
       // 🔹 Cargar equipos
       fetch(`http://172.16.1.37:4000/api/equipos/${zone}`)
         .then((res) => res.json())
-        .then((data) => {
-          console.log("Equipos API response:", data);
-          setEquipos(Array.isArray(data) ? data : []);
-        })
+        .then((data) => setEquipos(Array.isArray(data) ? data : []))
         .catch((err) => console.error("Error cargando equipos:", err));
 
       // 🔹 Cargar accesos DHCP
       fetch(`http://172.16.1.37:4000/api/accesos-dhcp/${zone}`)
         .then((res) => res.json())
-        .then((data) => {
-          console.log("Accesos DHCP:", data);
-          setAccesosDhcp(Array.isArray(data) ? data : []);
-        })
-        .catch((err) => console.error("Error cargando equipos:", err));
+        .then((data) => setAccesosDhcp(Array.isArray(data) ? data : []))
+        .catch((err) => console.error("Error cargando accesos DHCP:", err));
     }
   }, [zone]);
 
@@ -70,19 +64,47 @@ export default function ClientForm({ zone, pkIp, onCreated }) {
         body: JSON.stringify({ formData: form, pkIp, zone }),
       });
 
-      const text = await res.text();
-      try {
-        const data = JSON.parse(text);
-        console.log("Cliente creado:", data);
-        onCreated(data);
-      } catch {
-        console.error("Respuesta no JSON:", text);
+      const data = await res.json();
+      console.log("Cliente creado:", data);
+
+      if (data.cliente && data.conexion) {
+        setClienteCreado(data.cliente);
+        setConexionCreada(data.conexion);
+        setShowModal(true); // Abrir modal de aprovisionamiento
+        onCreated(data); // callback opcional
+      } else {
+        console.error("No se creó correctamente cliente o conexión:", data);
       }
     } catch (err) {
       console.error("Error creando cliente o conexión:", err);
     }
   };
-  console.log(accesosDhcp, "sfzfdbzfjl")
+
+  const handleAprovisionar = async () => {
+    try {
+      const res = await fetch("http://172.16.1.37:4000/api/cliente/aprovisionar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          zone,
+          pkConexion: conexionCreada.pk,
+          numeroDeSerie: form.numeroDeSerie,
+        }),
+      });
+
+      const data = await res.json();
+      console.log("Aprovisionamiento exitoso:", data);
+      setShowModal(false);
+      alert("Aprovisionamiento realizado con éxito.");
+    } catch (err) {
+      console.error("Error aprovisionando:", err);
+      alert("Error al aprovisionar.");
+    }
+  };
+
+  const handleCancelarAprovisionar = () => {
+    setShowModal(false);
+  };
 
   return (
    <div className="p-4">
@@ -256,6 +278,30 @@ export default function ClientForm({ zone, pkIp, onCreated }) {
       Crear Cliente y Conexión
     </button>
   </form>
+
+  {/* Modal de Aprovisionamiento */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-96 text-center">
+            <h3 className="text-lg font-bold mb-4">Aprovisionar Cliente</h3>
+            <p className="mb-4">Cliente y conexión creados correctamente. ¿Desea aprovisionar ahora?</p>
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={handleAprovisionar}
+                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+              >
+                Sí, Aprovisionar
+              </button>
+              <button
+                onClick={handleCancelarAprovisionar}
+                className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
+              >
+                No
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 </div>
     
    
