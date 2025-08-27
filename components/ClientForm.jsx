@@ -23,9 +23,9 @@ export default function ClientForm({ zone, pkIp, onCreated }) {
   const [planes, setPlanes] = useState([]);
   const [equipos, setEquipos] = useState([]);
   const [accesosDhcp, setAccesosDhcp] = useState([]);
-  const [showModal, setShowModal] = useState(false);
-  const [clienteCreado, setClienteCreado] = useState(null);
+   const [clienteCreado, setClienteCreado] = useState(null);
   const [conexionCreada, setConexionCreada] = useState(null);
+    const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     setForm((prev) => ({ ...prev, zone }));
@@ -34,26 +34,38 @@ export default function ClientForm({ zone, pkIp, onCreated }) {
       // 🔹 Cargar planes
       fetch(`http://172.16.1.37:4000/api/planes/${zone}`)
         .then((res) => res.json())
-        .then((data) => setPlanes(Array.isArray(data) ? data : []))
+        .then((data) => {
+          console.log("Planes API response:", data);
+          setPlanes(Array.isArray(data) ? data : []);
+        })
         .catch((err) => console.error("Error cargando planes:", err));
 
       // 🔹 Cargar equipos
       fetch(`http://172.16.1.37:4000/api/equipos/${zone}`)
         .then((res) => res.json())
-        .then((data) => setEquipos(Array.isArray(data) ? data : []))
+        .then((data) => {
+          console.log("Equipos API response:", data);
+          setEquipos(Array.isArray(data) ? data : []);
+        })
         .catch((err) => console.error("Error cargando equipos:", err));
 
       // 🔹 Cargar accesos DHCP
       fetch(`http://172.16.1.37:4000/api/accesos-dhcp/${zone}`)
         .then((res) => res.json())
-        .then((data) => setAccesosDhcp(Array.isArray(data) ? data : []))
-        .catch((err) => console.error("Error cargando accesos DHCP:", err));
+        .then((data) => {
+          console.log("Accesos DHCP:", data);
+          setAccesosDhcp(Array.isArray(data) ? data : []);
+        })
+        .catch((err) => console.error("Error cargando equipos:", err));
     }
   }, [zone]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
+
+
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -63,24 +75,21 @@ export default function ClientForm({ zone, pkIp, onCreated }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ formData: form, pkIp, zone }),
       });
-
-      const data = await res.json();
-      console.log("Cliente creado:", data);
+        const data = await res.json();
+        console.log("Cliente creado:", data);
 
       if (data.cliente && data.conexion) {
         setClienteCreado(data.cliente);
         setConexionCreada(data.conexion);
         setShowModal(true); // Abrir modal de aprovisionamiento
-        onCreated(data); // callback opcional
-      } else {
-        console.error("No se creó correctamente cliente o conexión:", data);
-      }
+        onCreated(data);
+      } 
     } catch (err) {
       console.error("Error creando cliente o conexión:", err);
     }
   };
 
-  const handleAprovisionar = async () => {
+   const handleAprovisionar = async () => {
     try {
       const res = await fetch("http://172.16.1.37:4000/api/cliente/aprovisionar", {
         method: "POST",
@@ -102,9 +111,13 @@ export default function ClientForm({ zone, pkIp, onCreated }) {
     }
   };
 
-  const handleCancelarAprovisionar = () => {
-    setShowModal(false);
-  };
+  const handleCancelarAprovisionar = () => setShowModal(false);
+
+  const inputClass = (campo) =>
+    `mt-1 block w-full border rounded-md shadow-sm p-2 text-black ${
+      errores[campo] ? "border-red-500" : "border-gray-300"
+    }`;
+  console.log(accesosDhcp, "sfzfdbzfjl")
 
   return (
    <div className="p-4">
@@ -278,7 +291,6 @@ export default function ClientForm({ zone, pkIp, onCreated }) {
       Crear Cliente y Conexión
     </button>
   </form>
-
   {/* Modal de Aprovisionamiento */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
