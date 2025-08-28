@@ -6,4 +6,4 @@ services:
     ports:
       - "3000:3000"
     environment:
-      NODE_ENV: production
+      NODE_ENV: NEXT_PUBLIC_URL_SERVER=http://172.16.1.37:400
