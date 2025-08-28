@@ -18,6 +18,8 @@ export default function Home() {
   const [pkIp, setPkIp] = useState(null);
   const [createdClient, setCreatedClient] = useState(null);
 
+  const URL_SERVER = process.env.NEXT_PUBLIC_URL_SERVER || "http://localhost:4000";
+
   // 🔹 Cuando cambia la zona, obtenemos automáticamente los servicios del nodo por defecto
   useEffect(() => {
     const fetchServices = async () => {
@@ -25,7 +27,7 @@ export default function Home() {
 
       const pkNode = DEFAULT_NODES[zone];
       try {
-        const res = await fetch(`http://172.16.1.37:4000/api/nodo/${zone}/${pkNode}`);
+        const res = await fetch(`${URL_SERVER}/api/nodo/${zone}/${pkNode}`);
         const data = await res.json();
         const servicesArray = [];
 

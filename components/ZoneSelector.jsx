@@ -3,13 +3,15 @@
 import { useEffect, useState } from "react";
 
 export default function ZoneSelector({ onSelect }) {
+
+  const URL_SERVER = process.env.NEXT_PUBLIC_URL_SERVER || "http://localhost:4000";
   const [zones, setZones] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadZones = async () => {
       try {
-        const res = await fetch("http://172.16.1.37:4000/api/zonas"); // 👈 ajusta si usas proxy
+        const res = await fetch(`${URL_SERVER}/api/zonas`); // 👈 ajusta si usas proxy
         const data = await res.json();
         setZones(data);
       } catch (error) {
