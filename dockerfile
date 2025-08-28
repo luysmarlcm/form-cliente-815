@@ -21,7 +21,7 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-ENV NODE_ENV: NEXT_PUBLIC_URL_SERVER=http://172.16.1.37:400
+ENV NODE_ENV: NEXT_PUBLIC_URL_SERVER=http://172.16.1.37:4000
 
 # Copiamos solo los archivos necesarios desde el stage builder
 COPY --from=builder /app/package*.json ./
