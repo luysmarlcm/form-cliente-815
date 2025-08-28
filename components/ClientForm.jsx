@@ -38,7 +38,7 @@ const [mensajeExito, setMensajeExito] = useState(""); // ✅ Estado para mensaje
 
     if (zone) {
       // 🔹 Cargar planes
-      fetch(`${URL_SERVER}/api/planes/${zone}`)
+      fetch(`http://172.16.1.37:4000/api/planes/${zone}`)
         .then((res) => res.json())
         .then((data) => {
           console.log("Planes API response:", data);
@@ -47,7 +47,7 @@ const [mensajeExito, setMensajeExito] = useState(""); // ✅ Estado para mensaje
         .catch((err) => console.error("Error cargando planes:", err));
 
       // 🔹 Cargar equipos
-      fetch(`${URL_SERVER}/api/equipos/${zone}`)
+      fetch(`http://172.16.1.37:4000/api/equipos/${zone}`)
         .then((res) => res.json())
         .then((data) => {
           console.log("Equipos API response:", data);
@@ -56,7 +56,7 @@ const [mensajeExito, setMensajeExito] = useState(""); // ✅ Estado para mensaje
         .catch((err) => console.error("Error cargando equipos:", err));
 
       // 🔹 Cargar accesos DHCP
-      fetch(`${URL_SERVER}/api/accesos-dhcp/${zone}`)
+      fetch(`http://172.16.1.37:4000/api/accesos-dhcp/${zone}`)
         .then((res) => res.json())
         .then((data) => {
           console.log("Accesos DHCP:", data);
@@ -75,7 +75,7 @@ const [mensajeExito, setMensajeExito] = useState(""); // ✅ Estado para mensaje
     setMensajeError(""); // limpiar errores previos
 
     try {
-      const res = await fetch("${URL_SERVER}/api/clientes/crear", {
+      const res = await fetch("http://172.16.1.37:4000/api/clientes/crear", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ formData: form, pkIp, zone }),
@@ -107,7 +107,7 @@ const [mensajeExito, setMensajeExito] = useState(""); // ✅ Estado para mensaje
   }
 
   try {
-    const res = await fetch("${URL_SERVER}/api/cliente/aprovisionar", {
+    const res = await fetch("http://172.16.1.37:4000/api/cliente/aprovisionar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

@@ -11,6 +11,7 @@ COPY package*.json ./
 RUN npm ci
 
 # 5. Copiamos el resto del proyecto
+
 COPY . .
 
 # 6. Construimos la app Next.js

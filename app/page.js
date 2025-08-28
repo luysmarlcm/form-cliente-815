@@ -27,7 +27,7 @@ export default function Home() {
 
       const pkNode = DEFAULT_NODES[zone];
       try {
-        const res = await fetch(`${URL_SERVER}/api/nodo/${zone}/${pkNode}`);
+        const res = await fetch(`http://172.16.1.37:4000/api/nodo/${zone}/${pkNode}`);
         const data = await res.json();
         const servicesArray = [];
 
