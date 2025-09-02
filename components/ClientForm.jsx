@@ -25,13 +25,14 @@ export default function ClientForm({ zone, pkIp, onCreated }) {
   const [planes, setPlanes] = useState([]);
   const [equipos, setEquipos] = useState([]);
   const [accesosDhcp, setAccesosDhcp] = useState([]);
-  const [clienteCreado, setClienteCreado] = useState(null);
-  const [conexionCreada, setConexionCreada] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [mensajeError, setMensajeError] = useState(""); // ⚠ Estado para errores del backend
-const [mensajeExito, setMensajeExito] = useState(""); // ✅ Estado para mensajes de éxito
+  const [mensajeError, setMensajeError] = useState("");
+  const [mensajeExito, setMensajeExito] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [logs, setLogs] = useState([]);
+  const [conexionPk, setConexionPk] = useState(null);
 
-
+  // Función para agregar logs en tiempo real
+  const addLog = (msg) => setLogs((prev) => [...prev, msg]);
 
   useEffect(() => {
     setForm((prev) => ({ ...prev, zone }));
@@ -66,136 +67,136 @@ const [mensajeExito, setMensajeExito] = useState(""); // ✅ Estado para mensaje
     }
   }, [zone]);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMensajeError(""); // limpiar errores previos
+    setMensajeError("");
+    setMensajeExito("");
+    setLogs([]);
+    setLoading(true);
 
     try {
-      const res = await fetch("http://172.16.1.37:4000/api/clientes/crear", {
+      addLog("🔹 Enviando datos al servidor...");
+      const res = await fetch(`http://172.16.1.37:4000/api/clientes/crear`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ formData: form, pkIp, zone }),
+        body: JSON.stringify({
+          formData: { ...form, direccion_ip: pkIp },
+          pkIp,
+          zone,
+        }),
       });
 
       const data = await res.json();
+      console.log("📥 Respuesta completa del servidor:", data);
 
       if (!res.ok || data.message) {
         setMensajeError(data.message || "Ocurrió un error al crear el cliente.");
         return;
       }
 
-      if (data.cliente && data.conexion) {
-        setClienteCreado(data.cliente);
-        setConexionCreada(data.conexion);
-        setShowModal(true); // Abrir modal de aprovisionamiento
-        onCreated(data);
+      if (!data.cliente || !data.conexion) {
+        setMensajeError("Error: El servidor no devolvió los datos del cliente o la conexión esperados.");
+        return;
       }
+
+      if (Array.isArray(data.conexion) && data.conexion.length > 0) {
+        setConexionPk(data.conexion[0].pk || data.conexion[0].id);
+      } else if (data.conexion?.pk || data.conexion?.id) {
+        setConexionPk(data.conexion.pk || data.conexion.id);
+      } else {
+        setMensajeError("No se pudo obtener el PK de la conexión.");
+        return;
+      }
+
+      setMensajeExito("Cliente y conexión creados correctamente ✅");
+      onCreated(data);
     } catch (err) {
-      console.error("Error creando cliente o conexión:", err);
+      console.error("❌ Error creando cliente o conexión:", err);
       setMensajeError("Error inesperado al conectar con el servidor.");
+    } finally {
+      setLoading(false);
     }
   };
 
- const handleAprovisionar = async () => {
-  if (!conexionCreada?.pk) {
-    setMensajeError("No existe conexión válida para aprovisionar.");
-    return;
-  }
+  // Nuevo handler para aprovisionar la conexión
+  const handleAprovisionar = async () => {
+    setMensajeError("");
+    setMensajeExito("");
+    setLogs([]);
+    setLoading(true);
 
-  try {
-    const res = await fetch("http://172.16.1.37:4000/api/cliente/aprovisionar", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        zone,
-        pkConexion: conexionCreada.pk,
-        numeroDeSerie: form.numeroDeSerie,
-      }),
-    });
+    try {
+      addLog("🔹 Aprovisionando conexión...");
+      const res = await fetch(`http://172.16.1.37:4000/api/cliente/aprovisionar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          zone,
+          pkConexion: conexionPk,
+          numeroDeSerie: form.numeroDeSerie,
+        }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
+      console.log("📥 Respuesta aprovisionamiento:", data);
 
-    // ⚠️ Si trae error
-    if (!res.ok || data.message) {
-      setMensajeError(data.message || "Error al aprovisionar.");
-      return;
+      if (data.logs) data.logs.forEach(addLog);
+
+      // Mostrar mensaje si el serial no existe
+      if (data.message && data.message.includes("no existe en la lista de ONUs disponibles")) {
+        setMensajeError(data.message);
+        return;
+      }
+
+      if (!res.ok || data.message) {
+        setMensajeError(data.message || "Ocurrió un error al aprovisionar.");
+        return;
+      }
+
+      if (data.estado === "OK") {
+        setMensajeExito(`✅ ${data.mensaje}`);
+      } else {
+        setMensajeError(data.mensaje || "Error en aprovisionamiento");
+      }
+    } catch (err) {
+      console.error("❌ Error en aprovisionamiento:", err);
+      setMensajeError("Error inesperado en aprovisionamiento.");
+    } finally {
+      setLoading(false);
     }
-
-    // ✅ Si trae "salida" con estado OK
-    if (data.salida?.estado === "OK") {
-      setMensajeExito(`✅ ${data.salida.mensaje}`);
-      console.log("Detalle técnico:", data.salida.detalle);
-    } else {
-      setMensajeError("El aprovisionamiento no se completó correctamente.");
-    }
-
-    setShowModal(false);
-  } catch (err) {
-    setMensajeError("Error inesperado al aprovisionar.");
-  }
-};
-
-
-  const handleCancelarAprovisionar = () => setShowModal(false);
+  };
 
   return (
-    <div className="w-full h-full p-4">
-      <h2 className="text-xl font-bold mb-4 text-center">Datos del Cliente y Conexión</h2>
+    <div className="w-full max-w-2xl mx-auto p-6 bg-white rounded-lg shadow">
+      <h2 className="text-xl font-bold mb-4">Crear Cliente</h2>
 
-      {/* 🔔 Mensaje de error */}
-      {mensajeError && (
-        <div className="mb-4 p-3 rounded-lg bg-red-100 text-red-700 border border-red-400">
-          ⚠ {mensajeError}
-        </div>
-      )}
-
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-4xl mx-auto p-6 rounded-xl shadow-md bg-white"
-      >
-        {/* Sección de Datos del Cliente */}
+      <form onSubmit={handleSubmit} className="w-full max-w-4xl mx-auto p-6 rounded-xl shadow-md bg-white">
         <div className="bg-gray-50 p-4 rounded-lg mb-6">
           <h3 className="text-lg font-semibold mb-4 flex items-center text-black">
             DATOS DEL CLIENTE
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Nombre */}
+            {["nombre", "cedula", "email", "telefono", "domicilio", "numeroDeSerie", "conector", "mac"].map((field) => (
+              <div key={field}>
+                <label className="block text-sm font-medium text-gray-700">
+                  {field === "conector" ? "ID WispHub" : field.toUpperCase()}
+                </label>
+                <input
+                  type={field === "email" ? "email" : "text"}
+                  name={field}
+                  value={form[field]}
+                  onChange={handleChange}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-black"
+                  required
+                />
+              </div>
+            ))}
+
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Nombre
-              </label>
-              <input
-                type="text"
-                name="nombre"
-                value={form.nombre}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-black"
-                required
-              />
-            </div>
-            {/* Cédula */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Cédula
-              </label>
-              <input
-                type="text"
-                name="cedula"
-                value={form.cedula}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-black"
-                required
-              />
-            </div>
-            {/* Plan Contratado (Select) */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Plan Contratado
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Plan Contratado</label>
               <select
                 name="plan"
                 value={form.plan}
@@ -211,168 +212,63 @@ const [mensajeExito, setMensajeExito] = useState(""); // ✅ Estado para mensaje
                 ))}
               </select>
             </div>
-            {/* Email */}
+
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={form.email}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-black"
-                required
-              />
-            </div>
-            {/* Equipo Cliente (Select) */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Equipo Cliente
-              </label>
-              <select
-                name="equipoCliente"
-                value={form.equipoCliente}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-black"
-                required
-              >
+              <label className="block text-sm font-medium text-gray-700">Equipo Cliente</label>
+              <select name="equipoCliente" value={form.equipoCliente} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-black" required>
                 <option value="">-- Selecciona equipo --</option>
-                {(equipos || []).map((e) => (
-                  <option key={e.pk} value={e.pk}>
-                    {e?.nombre || "Sin nombre"}
-                  </option>
+                {equipos.map((e) => (
+                  <option key={e.pk} value={e.pk}>{e?.nombre || "Sin nombre"}</option>
                 ))}
               </select>
             </div>
-            {/* Teléfono */}
+
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Teléfono
-              </label>
-              <input
-                type="text"
-                name="telefono"
-                value={form.telefono}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-black"
-                required
-              />
-            </div>
-            {/* Acceso DHCP (Select) */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Acceso DHCP
-              </label>
-              <select
-                name="accesoDhcp"
-                value={form.accesoDhcp}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-black"
-                required
-              >
+              <label className="block text-sm font-medium text-gray-700">Acceso DHCP</label>
+              <select name="accesoDhcp" value={form.accesoDhcp} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-black" required>
                 <option value="">-- Selecciona acceso --</option>
-                {(accesosDhcp || []).map((a) => (
-                  <option key={a.pk} value={a.pk}>
-                    {a?.nombre || "Sin nombre"}
-                  </option>
+                {accesosDhcp.map((a) => (
+                  <option key={a.pk} value={a.pk}>{a?.nombre || "Sin nombre"}</option>
                 ))}
               </select>
-            </div>
-            {/* Domicilio */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Domicilio
-              </label>
-              <input
-                type="text"
-                name="domicilio"
-                value={form.domicilio}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-black"
-                required
-              />
-            </div>
-            {/* Número de Serie */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Número de Serie
-              </label>
-              <input
-                type="text"
-                name="numeroDeSerie"
-                value={form.numeroDeSerie}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-black"
-                required
-              />
-            </div>
-            
-            {/* Conector */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                ID WISPHUB
-              </label>
-              <input
-                type="text"
-                name="conector"
-                value={form.conector}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-black"
-                required
-              />
-            </div>
-            {/* MAC */}
-            <div className="col-span-1">
-              <label className="block text-sm font-medium text-gray-700">
-                MAC Asignada
-              </label>
-              <input
-                type="text"
-                name="mac"
-                value={form.mac}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-black"
-                required
-              />
             </div>
           </div>
         </div>
 
-        {/* Botón de envío */}
-        <button
-          type="submit"
-          className="w-full bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out"
-        >
-          Crear Cliente y Conexión
+        <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out">
+          {loading ? "Procesando..." : "Crear Cliente y Conexión"}
         </button>
       </form>
 
-      {/* Modal de Aprovisionamiento */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-96 text-center">
-            <h3 className="text-lg font-bold mb-4">Aprovisionar Cliente</h3>
-            <p className="mb-4">
-              Cliente y conexión creados correctamente. ¿Desea aprovisionar ahora?
-            </p>
-            <div className="flex justify-center gap-4">
-              <button
-                onClick={handleAprovisionar}
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-              >
-                Sí, Aprovisionar
-              </button>
-              <button
-                onClick={handleCancelarAprovisionar}
-                className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-              >
-                No
-              </button>
-            </div>
-          </div>
+      {/* Botón para aprovisionar solo si hay pk de conexión */}
+      {conexionPk && (
+        <button
+          onClick={handleAprovisionar}
+          className="w-full bg-green-600 text-white p-2 rounded-lg mt-4"
+          disabled={loading}
+        >
+          {loading ? "Aprovisionando..." : "Aprovisionar Conexión"}
+        </button>
+      )}
+
+      {loading && (
+        <p className="mt-4 text-blue-600 font-medium">🔄 Procesando aprovisionamiento, por favor espere...</p>
+      )}
+      {mensajeError && <p className="mt-4 text-red-600 font-medium">{mensajeError}</p>}
+      {mensajeExito && <p className="mt-4 text-green-600 font-medium">{mensajeExito}</p>}
+
+      {/* Logs en tiempo real */}
+      {logs.length > 0 && (
+        <div className="mt-4 p-4 bg-gray-100 rounded max-h-40 overflow-y-auto">
+          <h4 className="font-semibold mb-2">Logs de Aprovisionamiento:</h4>
+          <ul className="text-sm text-gray-800">
+            {logs.map((l, i) => (
+              <li key={i}>• {l}</li>
+            ))}
+          </ul>
         </div>
       )}
     </div>
   );
 }
+
