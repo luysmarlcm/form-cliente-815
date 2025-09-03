@@ -30,9 +30,22 @@ export default function ClientForm({ zone, pkIp, onCreated }) {
   const [loading, setLoading] = useState(false);
   const [logs, setLogs] = useState([]);
   const [conexionPk, setConexionPk] = useState(null);
+  const [macStatus, setMacStatus] = useState("");
 
   // Función para agregar logs en tiempo real
   const addLog = (msg) => setLogs((prev) => [...prev, msg]);
+
+  // Función para validar MAC
+  function validarMac(valor) {
+    const regexMac = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
+    if (regexMac.test(valor)) {
+      setMacStatus("Dirección MAC válida");
+      return true;
+    } else {
+      setMacStatus("Formato de dirección MAC no válido");
+      return false;
+    }
+  }
 
   useEffect(() => {
     setForm((prev) => ({ ...prev, zone }));
