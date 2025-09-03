@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import ZoneSelector from "@/components/ZoneSelector";
+import OnuSelector from "@/components/OnuSelector";
 import ClientForm from "@/components/ClientForm";
 
 // Nodo por defecto para cada zona
@@ -16,6 +17,7 @@ export default function Home() {
   const [services, setServices] = useState([]);
   const [selectedService, setSelectedService] = useState(null);
   const [pkIp, setPkIp] = useState(null);
+  const [onuSerial, setOnuSerial] = useState("");
   const [createdClient, setCreatedClient] = useState(null);
 
   const URL_SERVER = process.env.NEXT_PUBLIC_URL_SERVER || "http://localhost:4000";
@@ -31,26 +33,12 @@ export default function Home() {
         const data = await res.json();
         const servicesArray = [];
 
-        // Correctly handle the API response structure
-        // The API returns a single "ip" object directly under the root
         if (data.ip) {
           servicesArray.push({
-            pk: "ip", // Use a unique key like "ip"
-            nombre: `IP ${data.ip.direccion_ip}`, // Use the actual IP address for a better display name
+            pk: "ip",
+            nombre: `IP ${data.ip.direccion_ip}`,
             type: "IP",
             pk_ip_disponible: data.ip.ip_disponible === "1" ? data.ip.pk_ip_disponible : null,
-          });
-        }
-        
-        // The API returns "onu: null", so no ONU service to add based on the example.
-        // If the API structure changes to include ONU data, this logic would need to be revisited.
-        // For now, it will not add an ONU service because data.onu is null.
-        if (data.onu) {
-          servicesArray.push({
-            pk: "onu",
-            nombre: `ONU ${data.onu.nombre}`,
-            type: "ONU",
-            pk_ip_disponible: data.onu.ip?.ip_disponible === "1" ? data.onu.ip.pk : null,
           });
         }
 
@@ -78,7 +66,9 @@ export default function Home() {
       {/* Paso 1: Seleccionar Zona */}
       <ZoneSelector onSelect={setZone} />
 
-      {/* Paso 2: Mostrar ONU/IP disponibles */}
+   
+
+      {/* Paso 3: Mostrar IP disponibles */}
       {services.length > 0 && (
         <div className="w-full max-w-md mb-6">
           <label className="block mb-2 font-medium">
@@ -99,9 +89,17 @@ export default function Home() {
         </div>
       )}
 
-      {/* Paso 3: Formulario para crear cliente */}
-      {pkIp && (
-        <ClientForm zone={zone} pkIp={pkIp} onCreated={setCreatedClient} />
+         {/* Paso 2: Mostrar ONU disponibles */}
+      {zone && <OnuSelector zone={zone} onSelect={setOnuSerial} />}
+
+      {/* Paso 4: Formulario solo si hay IP y ONU */}
+      {pkIp && onuSerial && (
+        <ClientForm
+          zone={zone}
+          pkIp={pkIp}
+          numeroDeSerie={onuSerial}
+          onCreated={setCreatedClient}
+        />
       )}
 
       {/* Resultado final */}
@@ -116,4 +114,3 @@ export default function Home() {
     </main>
   );
 }
-
