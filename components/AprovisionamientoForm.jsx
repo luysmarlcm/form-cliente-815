@@ -18,7 +18,7 @@ export default function AprovisionamientoForm({ zone, conexionPk, numeroDeSerie 
     // 🔹 Cargar perfiles de aprovisionamiento
     useEffect(() => {
         if (zone) {
-            fetch(`http://172.16.1.37:4000/api/conectores-perfil/${zone}`)
+            fetch(`${URL_SERVER}/api/conectores-perfil/${zone}`)
                 .then((res) => res.json())
                 .then((data) => {
                     if (Array.isArray(data)) {
