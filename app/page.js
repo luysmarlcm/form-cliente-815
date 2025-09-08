@@ -103,14 +103,14 @@ export default function Home() {
       )}
 
       {/* Resultado final */}
-      {createdClient && (
+      {/* {createdClient && (
         <div className="mt-6 p-4 bg-green-100 border text-black border-green-400 rounded w-full max-w-md">
           <h2 className="text-lg font-bold">Cliente creado:</h2>
           <pre className="text-sm mt-2 bg-gray-200 p-2 rounded">
             {JSON.stringify(createdClient, null, 2)}
           </pre>
         </div>
-      )}
+      )} */}
     </main>
   );
 }

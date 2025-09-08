@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import AprovisionamientoForm from "./AprovisionamientoForm"; // 👈 importamos el componente nuevo
+import AprovisionamientoForm from "./AprovisionamientoForm";
+import ModalMessage from "./ModalMessage";
+import FullScreenLoader from "./FullScreenLoader";
 
 export default function ClientForm({ zone, pkIp, numeroDeSerie, onCreated }) {
   const [form, setForm] = useState({
@@ -17,7 +19,7 @@ export default function ClientForm({ zone, pkIp, numeroDeSerie, onCreated }) {
     equipoCliente: "",
     nodoDeRed: "1400",
     conector: "",
-    numeroDeSerie: numeroDeSerie || "", // 👈 ahora viene desde el OnuSelector
+    numeroDeSerie: numeroDeSerie || "",
     zone: zone || "",
   });
 
@@ -29,7 +31,7 @@ export default function ClientForm({ zone, pkIp, numeroDeSerie, onCreated }) {
   const [loading, setLoading] = useState(false);
   const [conexionPk, setConexionPk] = useState(null);
 
-  // 🔹 Cuando cambie el serial en OnuSelector, actualizamos el form
+  // 🔹 Actualizar form cuando cambian zone o numeroDeSerie
   useEffect(() => {
     setForm((prev) => ({
       ...prev,
@@ -80,13 +82,20 @@ export default function ClientForm({ zone, pkIp, numeroDeSerie, onCreated }) {
       const data = await res.json();
       console.log("📥 Respuesta completa del servidor:", data);
 
-      if (!res.ok || data.message) {
+      if (!res.ok) {
         setMensajeError(data.message || "Ocurrió un error al crear el cliente.");
         return;
       }
 
-      if (!data.cliente || !data.conexion) {
-        setMensajeError("Error: El servidor no devolvió los datos del cliente o la conexión esperados.");
+      if (!data.cliente) {
+        setMensajeError("Error: El servidor no devolvió datos del cliente.");
+        return;
+      }
+
+      if (!data.conexion) {
+        setMensajeError("Cliente creado pero no se pudo crear la conexión.");
+        setMensajeExito("El cliente fue creado correctamente");
+        onCreated(data);
         return;
       }
 
@@ -95,11 +104,13 @@ export default function ClientForm({ zone, pkIp, numeroDeSerie, onCreated }) {
       } else if (data.conexion?.pk || data.conexion?.id) {
         setConexionPk(data.conexion.pk || data.conexion.id);
       } else {
-        setMensajeError("No se pudo obtener el PK de la conexión.");
+        setMensajeError("Cliente creado, pero no se pudo obtener el PK de la conexión.");
+        setMensajeExito("El cliente fue creado correctamente");
+        onCreated(data);
         return;
       }
 
-      setMensajeExito("Cliente y conexión creados correctamente ✅");
+      setMensajeExito("Cliente y conexión creados correctamente");
       onCreated(data);
     } catch (err) {
       console.error("❌ Error creando cliente o conexión:", err);
@@ -117,6 +128,7 @@ export default function ClientForm({ zone, pkIp, numeroDeSerie, onCreated }) {
         onSubmit={handleSubmit}
         className="w-full max-w-4xl mx-auto p-6 rounded-xl shadow-md bg-white"
       >
+        {/* DATOS DEL CLIENTE */}
         <div className="bg-gray-50 p-4 rounded-lg mb-6">
           <h3 className="text-lg font-semibold mb-4 flex items-center text-black">
             DATOS DEL CLIENTE
@@ -140,7 +152,6 @@ export default function ClientForm({ zone, pkIp, numeroDeSerie, onCreated }) {
               )
             )}
 
-            {/* Número de Serie readonly */}
             <div>
               <label className="block text-sm font-medium text-gray-700">Número de Serie</label>
               <input
@@ -152,7 +163,6 @@ export default function ClientForm({ zone, pkIp, numeroDeSerie, onCreated }) {
               />
             </div>
 
-            {/* Plan */}
             <div>
               <label className="block text-sm font-medium text-gray-700">Plan Contratado</label>
               <select
@@ -171,7 +181,6 @@ export default function ClientForm({ zone, pkIp, numeroDeSerie, onCreated }) {
               </select>
             </div>
 
-            {/* Equipo */}
             <div>
               <label className="block text-sm font-medium text-gray-700">Equipo Cliente</label>
               <select
@@ -190,7 +199,6 @@ export default function ClientForm({ zone, pkIp, numeroDeSerie, onCreated }) {
               </select>
             </div>
 
-            {/* Acceso DHCP */}
             <div>
               <label className="block text-sm font-medium text-gray-700">Acceso DHCP</label>
               <select
@@ -219,7 +227,7 @@ export default function ClientForm({ zone, pkIp, numeroDeSerie, onCreated }) {
         </button>
       </form>
 
-      {/* 👇 Sección de aprovisionamiento */}
+      {/* Aprovisionamiento */}
       {conexionPk && (
         <AprovisionamientoForm
           zone={zone}
@@ -228,8 +236,20 @@ export default function ClientForm({ zone, pkIp, numeroDeSerie, onCreated }) {
         />
       )}
 
-      {mensajeError && <p className="mt-4 text-red-600 font-medium">{mensajeError}</p>}
-      {mensajeExito && <p className="mt-4 text-green-600 font-medium">{mensajeExito}</p>}
+      {/* Modal Mensajes */}
+      <ModalMessage
+        type="error"
+        message={mensajeError}
+        onClose={() => setMensajeError("")}
+      />
+      <ModalMessage
+        type="success"
+        message={mensajeExito}
+        onClose={() => setMensajeExito("")}
+      />
+
+      {/* Loader FullScreen */}
+      <FullScreenLoader show={loading} text="Creando cliente y conexión..." />
     </div>
   );
 }

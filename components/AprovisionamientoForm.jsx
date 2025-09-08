@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import ModalMessage from "./ModalMessage";
+import FullScreenLoader from "./FullScreenLoader";
 
 export default function AprovisionamientoForm({ zone, conexionPk, numeroDeSerie }) {
     const [perfiles, setPerfiles] = useState([]);
@@ -9,6 +11,7 @@ export default function AprovisionamientoForm({ zone, conexionPk, numeroDeSerie 
     const [mensajeError, setMensajeError] = useState("");
     const [mensajeExito, setMensajeExito] = useState("");
     const [loading, setLoading] = useState(false);
+    const [conexionLocal, setConexionLocal] = useState(conexionPk || null);
 
     const addLog = (msg) => setLogs((prev) => [...prev, msg]);
 
@@ -19,10 +22,9 @@ export default function AprovisionamientoForm({ zone, conexionPk, numeroDeSerie 
                 .then((res) => res.json())
                 .then((data) => {
                     if (Array.isArray(data)) {
-                        // Filtrar solo perfiles con conector válido
                         const perfilesValidos = data.filter((p) => p.conector);
                         setPerfiles(perfilesValidos);
-                        // si hay perfil por defecto, lo seleccionamos
+
                         const def = perfilesValidos.find((p) => p.esDefault);
                         if (def) setPerfilSeleccionado(def.conector);
                     } else {
@@ -33,7 +35,46 @@ export default function AprovisionamientoForm({ zone, conexionPk, numeroDeSerie 
         }
     }, [zone]);
 
-    // 🔹 Handler para aprovisionar
+    // 🔹 Crear conexión si no existe
+    const handleCrearConexion = async () => {
+        setMensajeError("");
+        setMensajeExito("");
+        setLogs([]);
+        setLoading(true);
+
+        try {
+            addLog("🔹 Creando conexión...");
+            const res = await fetch(`http://172.16.1.37:4000/api/conexiones/crear`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ zone, numeroDeSerie }),
+            });
+
+            const data = await res.json();
+            console.log("📥 Respuesta creación conexión:", data);
+
+            if (!res.ok || data.message) {
+                setMensajeError(data.message || "Error al crear la conexión.");
+                return;
+            }
+
+            if (data.conexion?.pk || data.conexion?.id) {
+                const pk = data.conexion.pk || data.conexion.id;
+                setConexionLocal(pk);
+                setMensajeExito("Conexión creada correctamente");
+                addLog("Conexión creada con éxito.");
+            } else {
+                setMensajeError("No se pudo obtener el PK de la nueva conexión.");
+            }
+        } catch (err) {
+            console.error("❌ Error creando conexión:", err);
+            setMensajeError("Error inesperado al crear la conexión.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // 🔹 Aprovisionar conexión existente
     const handleAprovisionar = async () => {
         setMensajeError("");
         setMensajeExito("");
@@ -47,7 +88,7 @@ export default function AprovisionamientoForm({ zone, conexionPk, numeroDeSerie 
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     zone,
-                    pkConexion: conexionPk,
+                    pkConexion: conexionLocal,
                     numeroDeSerie,
                     conectorPerfil: Number(perfilSeleccionado),
                 }),
@@ -64,7 +105,7 @@ export default function AprovisionamientoForm({ zone, conexionPk, numeroDeSerie 
             }
 
             if (data.estado === "OK") {
-                setMensajeExito(`✅ ${data.mensaje}`);
+                setMensajeExito(data.mensaje || "Aprovisionamiento exitoso");
             } else {
                 setMensajeError(data.mensaje || "Error en aprovisionamiento");
             }
@@ -80,46 +121,70 @@ export default function AprovisionamientoForm({ zone, conexionPk, numeroDeSerie 
         <div className="w-full max-w-xl mx-auto mt-6 p-6 bg-white rounded-lg shadow">
             <h2 className="text-lg font-bold mb-4">Aprovisionamiento</h2>
 
-            {/* Selector de perfil */}
-            <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">
-                    Perfil de Aprovisionamiento
-                </label>
-                <select
-                    value={perfilSeleccionado}
-                    onChange={(e) => setPerfilSeleccionado(e.target.value)}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-black"
+            {!conexionLocal ? (
+                <button
+                    onClick={handleCrearConexion}
+                    disabled={loading}
+                    className="w-full bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
                 >
-                    <option value="">-- Selecciona perfil --</option>
-                    {perfiles.map((p, i) => (
-                        <option key={i} value={p.conector}>
-                            {p.nombre} {p.esDefault ? "⭐" : ""}
-                        </option>
-                    ))}
-                </select>
-            </div>
+                    {loading ? "Creando conexión..." : "Crear Conexión"}
+                </button>
+            ) : (
+                <>
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700">
+                            Perfil de Aprovisionamiento
+                        </label>
+                        <select
+                            value={perfilSeleccionado}
+                            onChange={(e) => setPerfilSeleccionado(e.target.value)}
+                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-black"
+                        >
+                            <option value="">-- Selecciona perfil --</option>
+                            {perfiles.map((p, i) => (
+                                <option key={i} value={p.conector}>
+                                    {p.nombre} {p.esDefault ? "(default)" : ""}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
 
-            <button
-                onClick={handleAprovisionar}
-                disabled={!perfilSeleccionado || loading}
-                className="w-full bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
-            >
-                {loading ? "Aprovisionando..." : "Aprovisionar Conexión"}
-            </button>
+                    <button
+                        onClick={handleAprovisionar}
+                        disabled={!perfilSeleccionado || loading}
+                        className="w-full bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
+                    >
+                        {loading ? "Aprovisionando..." : "Aprovisionar Conexión"}
+                    </button>
+                </>
+            )}
 
-            {mensajeError && <p className="mt-4 text-red-600 font-medium">{mensajeError}</p>}
-            {mensajeExito && <p className="mt-4 text-green-600 font-medium">{mensajeExito}</p>}
-
+            {/* Logs */}
             {logs.length > 0 && (
-                <div className="mt-4 p-4 bg-gray-100 rounded max-h-40 overflow-y-auto">
-                    <h4 className="font-semibold mb-2">Logs:</h4>
-                    <ul className="text-sm text-gray-800">
-                        {logs.map((l, i) => (
-                            <li key={i}>• {l}</li>
-                        ))}
-                    </ul>
+                <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm text-black max-h-40 overflow-y-auto">
+                    {logs.map((l, i) => (
+                        <p key={i}>• {l}</p>
+                    ))}
                 </div>
             )}
+
+            {/* Modales */}
+            <ModalMessage
+                type="error"
+                message={mensajeError}
+                onClose={() => setMensajeError("")}
+            />
+            <ModalMessage
+                type="success"
+                message={mensajeExito}
+                onClose={() => setMensajeExito("")}
+            />
+
+            {/* Loader FullScreen */}
+            <FullScreenLoader
+                show={loading}
+                text={conexionLocal ? "Aprovisionando conexión..." : "Creando conexión..."}
+            />
         </div>
     );
 }
