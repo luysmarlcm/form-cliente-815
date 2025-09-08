@@ -6,13 +6,14 @@ export default function OnuSelector({ zone, onSelect }) {
     const [onus, setOnus] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedOnu, setSelectedOnu] = useState("");
+    const URL_SERVER = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
     useEffect(() => {
         const loadOnus = async () => {
             if (!zone) return;
 
             try {
-                const res = await fetch(`http://172.16.1.37:4000/api/onus-disponibles/${zone}`);
+                const res = await fetch(`${URL_SERVER}/api/onus-disponibles/${zone}`);
                 const data = await res.json();
 
                 if (Array.isArray(data.onusDisponibles)) {

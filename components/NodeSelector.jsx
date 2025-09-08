@@ -5,11 +5,12 @@ import { useEffect, useState } from "react";
 export default function NodeSelector({ zone, onSelect, setServices }) {
   const [nodes, setNodes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const URL_SERVER = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
   useEffect(() => {
     const loadNodes = async () => {
       try {
-        const res = await fetch(`http://localhost:4000/api/nodos/${zone}`);
+        const res = await fetch(`${URL_SERVER}/api/nodos/${zone}`);
         const data = await res.json();
         setNodes(data);
       } catch (error) {

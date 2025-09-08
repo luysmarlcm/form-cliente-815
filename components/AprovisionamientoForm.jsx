@@ -12,7 +12,7 @@ export default function AprovisionamientoForm({ zone, conexionPk, numeroDeSerie 
     const [mensajeExito, setMensajeExito] = useState("");
     const [loading, setLoading] = useState(false);
     const [conexionLocal, setConexionLocal] = useState(conexionPk || null);
-
+    const URL_SERVER = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
     const addLog = (msg) => setLogs((prev) => [...prev, msg]);
 
     // 🔹 Cargar perfiles de aprovisionamiento
@@ -83,7 +83,7 @@ export default function AprovisionamientoForm({ zone, conexionPk, numeroDeSerie 
 
         try {
             addLog("🔹 Iniciando aprovisionamiento...");
-            const res = await fetch(`http://172.16.1.37:4000/api/cliente/aprovisionar`, {
+            const res = await fetch(`${URL_SERVER}/api/cliente/aprovisionar`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

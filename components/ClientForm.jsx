@@ -30,6 +30,7 @@ export default function ClientForm({ zone, pkIp, numeroDeSerie, onCreated }) {
   const [mensajeExito, setMensajeExito] = useState("");
   const [loading, setLoading] = useState(false);
   const [conexionPk, setConexionPk] = useState(null);
+  const URL_SERVER = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
   // 🔹 Actualizar form cuando cambian zone o numeroDeSerie
   useEffect(() => {
@@ -43,17 +44,17 @@ export default function ClientForm({ zone, pkIp, numeroDeSerie, onCreated }) {
   // 🔹 Cargar datos relacionados
   useEffect(() => {
     if (zone) {
-      fetch(`http://172.16.1.37:4000/api/planes/${zone}`)
+      fetch(`${URL_SERVER}/api/planes/${zone}`)
         .then((res) => res.json())
         .then((data) => setPlanes(Array.isArray(data) ? data : []))
         .catch((err) => console.error("Error cargando planes:", err));
 
-      fetch(`http://172.16.1.37:4000/api/equipos/${zone}`)
+      fetch(`${URL_SERVER}/api/equipos/${zone}`)
         .then((res) => res.json())
         .then((data) => setEquipos(Array.isArray(data) ? data : []))
         .catch((err) => console.error("Error cargando equipos:", err));
 
-      fetch(`http://172.16.1.37:4000/api/accesos-dhcp/${zone}`)
+      fetch(`${URL_SERVER}/api/accesos-dhcp/${zone}`)
         .then((res) => res.json())
         .then((data) => setAccesosDhcp(Array.isArray(data) ? data : []))
         .catch((err) => console.error("Error cargando accesos DHCP:", err));
@@ -69,7 +70,7 @@ export default function ClientForm({ zone, pkIp, numeroDeSerie, onCreated }) {
     setLoading(true);
 
     try {
-      const res = await fetch(`http://172.16.1.37:4000/api/clientes/crear`, {
+      const res = await fetch(`${URL_SERVER}/api/clientes/crear`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
