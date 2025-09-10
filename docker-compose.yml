@@ -2,8 +2,8 @@ version: "3.9"
 
 services:
   web:
+    # Construye la imagen desde el Dockerfile en el directorio actual
     build: .
+    # Mapea los puertos del contenedor al host
     ports:
       - "3000:3000"
-    environment:
-      NODE_ENV: NEXT_PUBLIC_URL_SERVER=http://172.16.1.37:4000
