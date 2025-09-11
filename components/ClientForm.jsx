@@ -21,6 +21,9 @@ export default function ClientForm({ zone, pkIp, numeroDeSerie, onCreated }) {
     conector: "",
     numeroDeSerie: numeroDeSerie || "",
     zone: zone || "",
+    lat: "",
+    lng: "",
+
   });
 
   const [planes, setPlanes] = useState([]);
@@ -84,12 +87,14 @@ export default function ClientForm({ zone, pkIp, numeroDeSerie, onCreated }) {
       console.log("📥 Respuesta completa del servidor:", data);
 
       if (!res.ok) {
-        setMensajeError(data.message || "Ocurrió un error al crear el cliente.");
+        const errorMessage = data.message ? `${data.message} - ${data.error}` : "Ocurrió un error al crear el cliente.";
+        setMensajeError(errorMessage);
         return;
       }
 
       if (!data.cliente) {
-        setMensajeError("Error: El servidor no devolvió datos del cliente.");
+        const errorMessage = data.message ? `${data.message} - ${data.error}` : "Error: El servidor no devolvió datos del cliente.";
+        setMensajeError(errorMessage);
         return;
       }
 
@@ -105,7 +110,8 @@ export default function ClientForm({ zone, pkIp, numeroDeSerie, onCreated }) {
       } else if (data.conexion?.pk || data.conexion?.id) {
         setConexionPk(data.conexion.pk || data.conexion.id);
       } else {
-        setMensajeError("Cliente creado, pero no se pudo obtener el PK de la conexión.");
+        const errorMessage = data.message ? `${data.message} - ${data.error}` : "Cliente creado, pero no se pudo obtener el PK de la conexión.";
+        setMensajeError(errorMessage);
         setMensajeExito("El cliente fue creado correctamente");
         onCreated(data);
         return;
@@ -135,7 +141,7 @@ export default function ClientForm({ zone, pkIp, numeroDeSerie, onCreated }) {
             DATOS DEL CLIENTE
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {["nombre", "cedula", "email", "telefono", "domicilio", "conector"].map(
+            {["nombre", "cedula", "email", "telefono", "domicilio", "conector", "lng", "lat"].map(
               (field) => (
                 <div key={field}>
                   <label className="block text-sm font-medium text-gray-700">

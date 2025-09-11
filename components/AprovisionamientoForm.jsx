@@ -10,6 +10,7 @@ export default function AprovisionamientoForm({ zone, conexionPk, numeroDeSerie 
     const [logs, setLogs] = useState([]);
     const [mensajeError, setMensajeError] = useState("");
     const [mensajeExito, setMensajeExito] = useState("");
+    const [mensajeAlert, setMensajeAlert] = useState("");
     const [loading, setLoading] = useState(false);
     const [conexionLocal, setConexionLocal] = useState(conexionPk || null);
     const URL_SERVER = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -44,7 +45,7 @@ export default function AprovisionamientoForm({ zone, conexionPk, numeroDeSerie 
 
         try {
             addLog("🔹 Creando conexión...");
-            const res = await fetch(`http://172.16.1.37:4000/api/conexiones/crear`, {
+            const res = await fetch(`${URL_SERVER}/api/conexiones/crear`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ zone, numeroDeSerie }),
@@ -75,9 +76,11 @@ export default function AprovisionamientoForm({ zone, conexionPk, numeroDeSerie 
     };
 
     // 🔹 Aprovisionar conexión existente
+    // 🔹 Aprovisionar conexión existente
     const handleAprovisionar = async () => {
         setMensajeError("");
         setMensajeExito("");
+        setMensajeAlert(""); // limpiar alerta
         setLogs([]);
         setLoading(true);
 
@@ -104,10 +107,16 @@ export default function AprovisionamientoForm({ zone, conexionPk, numeroDeSerie 
                 return;
             }
 
-            if (data.estado === "OK") {
-                setMensajeExito(data.mensaje || "Aprovisionamiento exitoso");
+            // ✅ Manejo según el estado
+            if (data?.estado === "OK" || (data.estado === "OK" && data.resultado?.salida?.mensaje === "OK")) {
+                setMensajeExito(data.resultado.salida?.mensaje || data.mensaje || "Aprovisionamiento exitoso");
+            } else if (data.resultado?.salida?.estado === "Alerta") {
+                setMensajeAlert(`${data.resultado.salida.mensaje}\n\n${data.resultado.salida.detalle}`);
             } else {
-                setMensajeError(data.mensaje || "Error en aprovisionamiento");
+                const errorMessage = data.message
+                    ? `${data.message} - ${data.error || ""}`
+                    : "Error en aprovisionamiento";
+                setMensajeError(errorMessage);
             }
         } catch (err) {
             console.error("❌ Error en aprovisionamiento:", err);
@@ -116,6 +125,7 @@ export default function AprovisionamientoForm({ zone, conexionPk, numeroDeSerie 
             setLoading(false);
         }
     };
+
 
     return (
         <div className="w-full max-w-xl mx-auto mt-6 p-6 bg-white rounded-lg shadow">
@@ -178,6 +188,11 @@ export default function AprovisionamientoForm({ zone, conexionPk, numeroDeSerie 
                 type="success"
                 message={mensajeExito}
                 onClose={() => setMensajeExito("")}
+            />
+            <ModalMessage
+                type="alert"
+                message={mensajeAlert}
+                onClose={() => setMensajeAlert("")}
             />
 
             {/* Loader FullScreen */}
